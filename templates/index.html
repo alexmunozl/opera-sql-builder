@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opera Cloud SQL Query Builder</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e1e4e8; min-height: 100vh; }
+  header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 32px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; font-weight: 600; color: #f0f6fc; }
+  header span { font-size: 13px; color: #8b949e; background: #21262d; padding: 2px 8px; border-radius: 12px; border: 1px solid #30363d; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid #30363d; }
+  .tab { padding: 10px 20px; font-size: 14px; font-weight: 500; color: #8b949e; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .tab:hover { color: #e1e4e8; }
+  .tab.active { color: #f0f6fc; border-bottom-color: #388bfd; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .input-section { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+  .input-section label { display: block; font-size: 13px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  textarea { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e1e4e8; font-size: 15px; padding: 14px; resize: vertical; min-height: 100px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+  textarea.code { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; font-size: 13px; min-height: 180px; }
+  textarea:focus { border-color: #388bfd; }
+  .examples { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .example-chip { font-size: 12px; color: #58a6ff; background: #132032; border: 1px solid #1f3a54; border-radius: 20px; padding: 4px 12px; cursor: pointer; transition: background 0.15s; }
+  .example-chip:hover { background: #1c4068; }
+  .btn { margin-top: 16px; background: #238636; color: #fff; border: none; border-radius: 6px; padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .btn:hover { background: #2ea043; }
+  .btn.blue { background: #1f6feb; }
+  .btn.blue:hover { background: #388bfd; }
+  .btn:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+  .results { display: none; }
+  .result-block { background: #161b22; border: 1px solid #30363d; border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+  .result-header { background: #21262d; padding: 12px 20px; font-size: 13px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+  .copy-btn { background: #21262d; border: 1px solid #30363d; color: #8b949e; border-radius: 5px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .copy-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  pre { padding: 20px; overflow-x: auto; font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .logic-content { padding: 20px; line-height: 1.7; font-size: 14px; }
+  .logic-content h2 { font-size: 15px; color: #f0f6fc; margin-bottom: 12px; margin-top: 16px; }
+  .logic-content h2:first-child { margin-top: 0; }
+  .logic-content p { color: #8b949e; margin-bottom: 8px; }
+  .logic-content ul, .logic-content ol { color: #8b949e; padding-left: 20px; margin-bottom: 8px; }
+  .logic-content li { margin-bottom: 4px; }
+  .logic-content strong { color: #e1e4e8; }
+  .tables-badge { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 20px; border-top: 1px solid #21262d; }
+  .badge { font-size: 11px; background: #132032; color: #58a6ff; border: 1px solid #1f3a54; border-radius: 4px; padding: 2px 8px; }
+  .badge.secondary { background: #1c1207; color: #e3b341; border-color: #3d2e00; }
+  .loading { text-align: center; padding: 40px; color: #8b949e; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { background: #1c1217; border: 1px solid #6e3040; border-radius: 10px; padding: 20px; color: #f85149; font-size: 14px; }
+  .table-search { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+  .table-search input { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e1e4e8; font-size: 14px; padding: 10px 14px; outline: none; }
+  .table-search input:focus { border-color: #388bfd; }
+  .table-results { margin-top: 12px; max-height: 220px; overflow-y: auto; }
+  .table-row { padding: 8px 12px; border-bottom: 1px solid #21262d; font-size: 13px; }
+  .table-row:last-child { border-bottom: none; }
+  .table-row .tname { color: #58a6ff; font-weight: 600; font-family: monospace; }
+  .table-row .tmod { color: #3fb950; font-size: 11px; margin-left: 8px; }
+  .table-row .tdesc { color: #8b949e; margin-top: 2px; }
+  /* Refinement chat */
+  .refine-section { background: #161b22; border: 1px solid #388bfd; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+  .refine-section label { display: block; font-size: 13px; font-weight: 600; color: #388bfd; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .refine-row { display: flex; gap: 10px; margin-top: 12px; }
+  .refine-row input { flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e1e4e8; font-size: 14px; padding: 10px 14px; outline: none; transition: border-color 0.2s; }
+  .refine-row input:focus { border-color: #388bfd; }
+  .refine-row .btn { margin-top: 0; }
+  .chat-history { margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .chat-bubble { padding: 10px 14px; border-radius: 8px; font-size: 13px; max-width: 85%; }
+  .chat-bubble.user { background: #132032; color: #58a6ff; align-self: flex-end; border: 1px solid #1f3a54; }
+  .chat-bubble.assistant { background: #21262d; color: #8b949e; align-self: flex-start; border: 1px solid #30363d; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Opera Cloud SQL Query Builder</h1>
+  <span>725 tables · Oracle SQL · OHRA - Oracle Hospitality Report & Analytics</span>
+</header>
+<div class="container">
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('generate')">Generate Query</div>
+    <div class="tab" onclick="switchTab('review')">Review & Optimise</div>
+    <div class="tab" onclick="switchTab('browse')">Browse Tables</div>
+  </div>
+
+  <!-- Generate Tab -->
+  <div class="tab-panel active" id="tab-generate">
+    <div class="input-section">
+      <label>Describe the query you need</label>
+      <textarea id="queryInput" placeholder="e.g. Show me all reservations with guest name, room number, arrival and departure dates for a specific property and date range"></textarea>
+      <div class="examples">
+        <span class="example-chip" onclick="setExample(this)">Reservations with guest profile and room details</span>
+        <span class="example-chip" onclick="setExample(this)">Revenue by room type for a date range</span>
+        <span class="example-chip" onclick="setExample(this)">Housekeeping status with assigned attendant</span>
+        <span class="example-chip" onclick="setExample(this)">Folio charges with payment methods</span>
+        <span class="example-chip" onclick="setExample(this)">Membership points balance per guest</span>
+        <span class="example-chip" onclick="setExample(this)">Group block pickup vs contracted rooms</span>
+      </div>
+      <button class="btn" id="submitBtn" onclick="buildQuery()">Generate SQL Query</button>
+    </div>
+    <div class="results" id="generateResults"></div>
+  </div>
+
+  <!-- Review Tab -->
+  <div class="tab-panel" id="tab-review">
+    <div class="input-section">
+      <label>Paste your existing SQL query</label>
+      <textarea class="code" id="reviewInput" placeholder="Paste your Oracle SQL query here to review, correct, and optimise it..."></textarea>
+      <button class="btn blue" id="reviewBtn" onclick="reviewQuery()">Review & Optimise</button>
+    </div>
+    <div class="results" id="reviewResults"></div>
+  </div>
+
+  <!-- Browse Tab -->
+  <div class="tab-panel" id="tab-browse">
+    <div class="table-search">
+      <label style="font-size:13px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:10px;">Search Tables</label>
+      <input type="text" id="tableSearch" placeholder="Search by table name, module, or description..." oninput="searchTables(this.value)">
+      <div class="table-results" id="tableResults"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// State for the current generated query (used for refinement)
+let currentState = {
+  sql: '',
+  logic: '',
+  tableContext: '',
+  history: []
+};
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['generate','review','browse'][i] === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+async function buildQuery() {
+  const input = document.getElementById('queryInput').value.trim();
+  if (!input) return;
+  const btn = document.getElementById('submitBtn');
+  const results = document.getElementById('generateResults');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  results.style.display = 'block';
+  results.innerHTML = '<div class="loading"><span class="spinner"></span>Searching knowledgebase and generating query...</div>';
+  currentState = { sql: '', logic: '', tableContext: '', history: [] };
+
+  try {
+    const res = await fetch('/query', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({request: input})
+    });
+    const data = await res.json();
+    if (data.error) { results.innerHTML = `<div class="error">${data.error}</div>`; return; }
+
+    currentState.sql = data.sql;
+    currentState.logic = data.logic;
+    currentState.tableContext = data.table_context;
+
+    results.innerHTML = buildQueryResultHTML(data.sql, data.logic, data.tables_searched);
+  } catch(e) {
+    results.innerHTML = `<div class="error">Request failed: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate SQL Query';
+  }
+}
+
+function buildQueryResultHTML(sql, logic, tables) {
+  const badges = tables.map(t => {
+    const isSecondary = t.startsWith('OBI_') || t.startsWith('OBITAB_');
+    return `<span class="badge${isSecondary ? ' secondary' : ''}" title="${isSecondary ? 'BI-layer copy — base table preferred' : ''}">${t}</span>`;
+  }).join('');
+
+  return `
+    <div class="result-block">
+      <div class="result-header">
+        <span>Generated SQL</span>
+        <button class="copy-btn" onclick="copyText('sqlContent')">Copy</button>
+      </div>
+      <pre id="sqlContent">${escapeHtml(sql)}</pre>
+      <div class="tables-badge">${badges}</div>
+    </div>
+    ${logic ? `<div class="result-block">
+      <div class="result-header"><span>Logic &amp; Joins</span></div>
+      <div class="logic-content">${renderMarkdown(logic)}</div>
+    </div>` : ''}
+    <div class="refine-section" id="refineSection">
+      <label>Refine this query</label>
+      <div class="chat-history" id="chatHistory"></div>
+      <div class="refine-row">
+        <input type="text" id="refineInput" placeholder="e.g. Add a filter for check-in date, also include the room rate..." />
+        <button class="btn blue" id="refineBtn" onclick="refineQuery()">Send</button>
+      </div>
+    </div>`;
+}
+
+async function refineQuery() {
+  const followUp = document.getElementById('refineInput').value.trim();
+  if (!followUp || !currentState.sql) return;
+
+  const btn = document.getElementById('refineBtn');
+  const history = document.getElementById('chatHistory');
+  btn.disabled = true;
+  btn.textContent = 'Thinking...';
+
+  // Add user bubble
+  history.innerHTML += `<div class="chat-bubble user">${escapeHtml(followUp)}</div>`;
+  document.getElementById('refineInput').value = '';
+
+  // Add loading bubble
+  const loadingId = 'loading-' + Date.now();
+  history.innerHTML += `<div class="chat-bubble assistant" id="${loadingId}"><span class="spinner"></span>Updating query...</div>`;
+  history.scrollTop = history.scrollHeight;
+
+  try {
+    const res = await fetch('/refine', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        sql: currentState.sql,
+        logic: currentState.logic,
+        table_context: currentState.tableContext,
+        follow_up: followUp,
+        history: currentState.history
+      })
+    });
+    const data = await res.json();
+    document.getElementById(loadingId)?.remove();
+
+    if (data.error) {
+      history.innerHTML += `<div class="chat-bubble assistant" style="color:#f85149">${data.error}</div>`;
+      return;
+    }
+
+    // Save turn to history
+    currentState.history.push({ user: followUp, assistant: data.sql + '\n\n' + data.logic });
+    currentState.sql = data.sql;
+    currentState.logic = data.logic;
+
+    // Add assistant bubble summarising the change
+    const whatChanged = data.logic.includes('## What Changed')
+      ? data.logic.split('## What Changed')[1].split('##')[0].trim()
+      : 'Query updated.';
+    history.innerHTML += `<div class="chat-bubble assistant">${renderMarkdown('## What Changed\n' + whatChanged)}</div>`;
+    history.scrollTop = history.scrollHeight;
+
+    // Update the SQL and logic blocks
+    document.getElementById('sqlContent').textContent = data.sql;
+    const logicBlocks = document.querySelectorAll('#generateResults .logic-content');
+    if (logicBlocks.length > 0) {
+      logicBlocks[logicBlocks.length - 1].innerHTML = renderMarkdown(data.logic);
+    }
+
+  } catch(e) {
+    document.getElementById(loadingId)?.remove();
+    history.innerHTML += `<div class="chat-bubble assistant" style="color:#f85149">Request failed: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send';
+  }
+}
+
+async function reviewQuery() {
+  const sql = document.getElementById('reviewInput').value.trim();
+  if (!sql) return;
+  const btn = document.getElementById('reviewBtn');
+  const results = document.getElementById('reviewResults');
+  btn.disabled = true;
+  btn.textContent = 'Reviewing...';
+  results.style.display = 'block';
+  results.innerHTML = '<div class="loading"><span class="spinner"></span>Analysing query against knowledgebase...</div>';
+
+  try {
+    const res = await fetch('/review', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sql})
+    });
+    const data = await res.json();
+    if (data.error) { results.innerHTML = `<div class="error">${data.error}</div>`; return; }
+
+    const sections = parseReviewSections(data.review);
+    const badges = data.tables_found.map(t => {
+      const isSecondary = t.startsWith('OBI_') || t.startsWith('OBITAB_');
+      return `<span class="badge${isSecondary ? ' secondary' : ''}">${t}</span>`;
+    }).join('');
+
+    results.innerHTML = `
+      ${sections.optimisedSql ? `<div class="result-block">
+        <div class="result-header">
+          <span>Optimised SQL</span>
+          <button class="copy-btn" onclick="copyText('reviewSqlContent')">Copy</button>
+        </div>
+        <pre id="reviewSqlContent">${escapeHtml(sections.optimisedSql)}</pre>
+        <div class="tables-badge">${badges}</div>
+      </div>` : ''}
+      <div class="result-block">
+        <div class="result-header"><span>Review Report</span></div>
+        <div class="logic-content">${renderMarkdown(sections.report)}</div>
+      </div>`;
+  } catch(e) {
+    results.innerHTML = `<div class="error">Request failed: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Review & Optimise';
+  }
+}
+
+function parseReviewSections(text) {
+  const sqlMatch = text.match(/## Optimised Query\s*([\s\S]*?)(?=\n## |$)/);
+  let optimisedSql = '';
+  let report = text;
+  if (sqlMatch) {
+    const raw = sqlMatch[1].trim();
+    const codeMatch = raw.match(/```(?:sql)?\s*([\s\S]*?)```/i);
+    optimisedSql = codeMatch ? codeMatch[1].trim() : raw;
+    report = text.replace(sqlMatch[0], `## Optimised Query\n_(shown above)_\n`);
+  }
+  return { optimisedSql, report };
+}
+
+async function searchTables(q) {
+  const container = document.getElementById('tableResults');
+  if (q.length < 2) { container.innerHTML = ''; return; }
+  const res = await fetch(`/tables?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  if (!data.length) { container.innerHTML = '<div class="table-row" style="color:#8b949e">No tables found</div>'; return; }
+  container.innerHTML = data.map(t => `
+    <div class="table-row">
+      <span class="tname">${t.table_name}</span><span class="tmod">${t.module}</span>
+      <div class="tdesc">${t.description || ''}</div>
+    </div>`).join('');
+}
+
+function setExample(el) {
+  document.getElementById('queryInput').value = el.textContent;
+}
+
+function copyText(id) {
+  navigator.clipboard.writeText(document.getElementById(id).textContent);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderMarkdown(text) {
+  return text
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3 style="color:#e1e4e8;margin:10px 0 6px">$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code style="background:#0d1117;padding:1px 5px;border-radius:3px;font-family:monospace">$1</code>')
+    .replace(/^\- (.+)$/gm, '<li>$1</li>')
+    .replace(/(_\(shown above\)_)/g, '<em style="color:#8b949e">$1</em>')
+    .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[huplo])/gm, '')
+    .replace(/\n/g, '<br>');
+}
+
+document.getElementById('queryInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) buildQuery();
+});
+document.getElementById('reviewInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) reviewQuery();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('refineInput') === document.activeElement) {
+    refineQuery();
+  }
+});
+</script>
+</body>
+</html>
