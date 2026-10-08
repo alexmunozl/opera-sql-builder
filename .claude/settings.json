@@ -1,0 +1,17 @@
+{
+  "enabledPlugins": {
+    "apex@oracle-skills": true,
+    "db@oracle-skills": true,
+    "fusion@oracle-skills": true,
+    "graal@oracle-skills": true,
+    "oci@oracle-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "oracle-skills": {
+      "source": {
+        "source": "github",
+        "repo": "oracle/skills"
+      }
+    }
+  }
+}
